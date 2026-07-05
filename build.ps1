@@ -1,17 +1,31 @@
 $ErrorActionPreference = "Stop"
 
 $Root = Split-Path -Parent $MyInvocation.MyCommand.Path
-$BuildRoot = Join-Path $Root "build_out"
-$Dist = Join-Path $BuildRoot "dist"
-$Work = Join-Path $BuildRoot "build"
-$Icon = Join-Path $Root "assets\bolt_autoclicker.ico"
+$Dist = $Root
+$Work = Join-Path $Root "build"
+$AssetIcon = Join-Path $Root "assets\bolt_autoclicker.ico"
+$Extra = Join-Path $Root "extra"
+$ExtraIcon = Join-Path $Extra "bolt_autoclicker.ico"
+$Icon = if (Test-Path $ExtraIcon) { $ExtraIcon } else { $AssetIcon }
 $Assets = Join-Path $Root "assets"
-$BundledPython = "C:\Users\ilans\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\python.exe"
-$PythonExe = "python"
+$Source = Join-Path $Root "bolt_autoclicker.py"
+$NewExe = Join-Path $Root "BoltAutoClicker_new.exe"
 
+Write-Host "Using icon: $Icon"
+
+if (Test-Path $Work) {
+    Remove-Item -LiteralPath $Work -Recurse -Force
+}
+
+if (Test-Path $NewExe) {
+    Remove-Item -LiteralPath $NewExe -Force
+}
+
+$PythonExe = "python"
 try {
     & $PythonExe --version | Out-Null
 } catch {
+    $BundledPython = "C:\Users\ilans\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\python.exe"
     if (Test-Path $BundledPython) {
         $PythonExe = $BundledPython
     } else {
@@ -19,11 +33,13 @@ try {
     }
 }
 
-if (Test-Path $BuildRoot) {
-    Remove-Item -LiteralPath $BuildRoot -Recurse -Force
-}
+& $PythonExe (Join-Path $Root "prepare_assets.py")
+$Icon = if (Test-Path $ExtraIcon) { $ExtraIcon } else { $AssetIcon }
 
-& $PythonExe (Join-Path $Root "make_icon.py")
+$AddDataArgs = @("--add-data", "$Assets;assets")
+if (Test-Path $Extra) {
+    $AddDataArgs += @("--add-data", "$Extra;extra")
+}
 
 & $PythonExe -m PyInstaller `
     --noconfirm `
@@ -31,12 +47,16 @@ if (Test-Path $BuildRoot) {
     --noupx `
     --onefile `
     --windowed `
-    --name BoltAutoClicker `
+    --name BoltAutoClicker_new `
     --icon $Icon `
-    --add-data "$Assets;assets" `
+    @AddDataArgs `
     --distpath $Dist `
     --workpath $Work `
-    --specpath $BuildRoot `
-    (Join-Path $Root "bolt_autoclicker.py")
+    --specpath $Root `
+    $Source
 
-Write-Host "One-file build complete: $(Join-Path $Dist 'BoltAutoClicker.exe')"
+if (!(Test-Path $NewExe)) {
+    throw "Build failed. Missing output: $NewExe"
+}
+
+Write-Host "One-file build complete: $NewExe"

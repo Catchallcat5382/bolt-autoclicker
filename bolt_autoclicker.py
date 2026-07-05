@@ -12,11 +12,21 @@ from pathlib import Path
 
 APP_NAME = "Bolt AutoClicker"
 SETTINGS_FILE = "bolt_settings.json"
+ASSETS_FOLDER = "assets"
+EXTRA_FOLDER = "extra"
+APP_ICO_FILE = "bolt_autoclicker.ico"
+APP_LOGO_PNG_FILE = "bolt_autoclicker_logo.png"
+APP_HEADER_BMP_FILE = "bolt_autoclicker_header.bmp"
+APP_AUMID = "Bolt.AutoClicker.App"
 
 user32 = ctypes.windll.user32
 gdi32 = ctypes.windll.gdi32
 kernel32 = ctypes.windll.kernel32
+shell32 = ctypes.windll.shell32
 LRESULT = wintypes.LPARAM
+
+def MAKEINTRESOURCEW(resource_id: int) -> wintypes.LPCWSTR:
+    return ctypes.cast(ctypes.c_void_p(resource_id), wintypes.LPCWSTR)
 
 user32.DefWindowProcW.argtypes = [wintypes.HWND, wintypes.UINT, wintypes.WPARAM, wintypes.LPARAM]
 user32.DefWindowProcW.restype = LRESULT
@@ -35,12 +45,28 @@ user32.CreateWindowExW.argtypes = [
     wintypes.LPVOID,
 ]
 user32.CreateWindowExW.restype = wintypes.HWND
+user32.RegisterClassExW.argtypes = [ctypes.c_void_p]
+user32.RegisterClassExW.restype = wintypes.ATOM
+shell32.SetCurrentProcessExplicitAppUserModelID.argtypes = [wintypes.LPCWSTR]
+shell32.SetCurrentProcessExplicitAppUserModelID.restype = ctypes.c_long
+kernel32.GetModuleHandleW.argtypes = [wintypes.LPCWSTR]
+kernel32.GetModuleHandleW.restype = wintypes.HINSTANCE
 user32.SendMessageW.argtypes = [wintypes.HWND, wintypes.UINT, wintypes.WPARAM, wintypes.LPARAM]
 user32.SendMessageW.restype = LRESULT
 user32.LoadCursorW.argtypes = [wintypes.HINSTANCE, wintypes.LPCWSTR]
 user32.LoadCursorW.restype = wintypes.HANDLE
+user32.LoadIconW.argtypes = [wintypes.HINSTANCE, wintypes.LPCWSTR]
+user32.LoadIconW.restype = wintypes.HANDLE
+user32.DestroyWindow.argtypes = [wintypes.HWND]
+user32.DestroyWindow.restype = wintypes.BOOL
 user32.LoadImageW.argtypes = [wintypes.HINSTANCE, wintypes.LPCWSTR, wintypes.UINT, ctypes.c_int, ctypes.c_int, wintypes.UINT]
 user32.LoadImageW.restype = wintypes.HANDLE
+user32.SetWindowPos.argtypes = [wintypes.HWND, wintypes.HWND, ctypes.c_int, ctypes.c_int, ctypes.c_int, ctypes.c_int, wintypes.UINT]
+user32.SetWindowPos.restype = wintypes.BOOL
+user32.GetClientRect.argtypes = [wintypes.HWND, ctypes.POINTER(wintypes.RECT)]
+user32.GetClientRect.restype = wintypes.BOOL
+user32.SetScrollInfo.argtypes = [wintypes.HWND, ctypes.c_int, ctypes.c_void_p, wintypes.BOOL]
+user32.SetScrollInfo.restype = ctypes.c_int
 user32.RegisterHotKey.argtypes = [wintypes.HWND, ctypes.c_int, wintypes.UINT, wintypes.UINT]
 user32.UnregisterHotKey.argtypes = [wintypes.HWND, ctypes.c_int]
 gdi32.SetBkMode.argtypes = [wintypes.HDC, ctypes.c_int]
@@ -50,8 +76,12 @@ WM_DESTROY = 0x0002
 WM_COMMAND = 0x0111
 WM_CTLCOLORSTATIC = 0x0138
 WM_HOTKEY = 0x0312
+WM_SIZE = 0x0005
+WM_VSCROLL = 0x0115
+WM_MOUSEWHEEL = 0x020A
 WM_SETFONT = 0x0030
 WM_SETICON = 0x0080
+WM_CLOSE = 0x0010
 BM_SETCHECK = 0x00F1
 BM_GETCHECK = 0x00F0
 BST_CHECKED = 1
@@ -65,25 +95,51 @@ WS_OVERLAPPED = 0x00000000
 WS_CAPTION = 0x00C00000
 WS_SYSMENU = 0x00080000
 WS_MINIMIZEBOX = 0x00020000
+WS_THICKFRAME = 0x00040000
+WS_MAXIMIZEBOX = 0x00010000
+WS_VSCROLL = 0x00200000
 WS_EX_DLGMODALFRAME = 0x00000001
 WS_VISIBLE = 0x10000000
 WS_CHILD = 0x40000000
 WS_TABSTOP = 0x00010000
 WS_GROUP = 0x00020000
+WS_BORDER = 0x00800000
 BS_PUSHBUTTON = 0x00000000
 BS_DEFPUSHBUTTON = 0x00000001
 BS_AUTORADIOBUTTON = 0x00000009
 BS_AUTOCHECKBOX = 0x00000003
+BS_GROUPBOX = 0x00000007
 CBS_DROPDOWNLIST = 0x0003
 SS_LEFT = 0x00000000
 SS_CENTERIMAGE = 0x00000200
 SS_ICON = 0x00000003
+SS_BITMAP = 0x0000000E
 STM_SETICON = 0x0170
+STM_SETIMAGE = 0x0172
+IMAGE_BITMAP = 0
 IMAGE_ICON = 1
 LR_LOADFROMFILE = 0x0010
+LR_DEFAULTSIZE = 0x0040
+SWP_NOZORDER = 0x0004
+SWP_NOACTIVATE = 0x0010
+SB_VERT = 1
+SB_LINEUP = 0
+SB_LINEDOWN = 1
+SB_PAGEUP = 2
+SB_PAGEDOWN = 3
+SB_THUMBPOSITION = 4
+SB_THUMBTRACK = 5
+SIF_RANGE = 0x0001
+SIF_PAGE = 0x0002
+SIF_POS = 0x0004
+SIF_ALL = SIF_RANGE | SIF_PAGE | SIF_POS
 ICON_SMALL = 0
 ICON_BIG = 1
 COLOR_WINDOW = 5
+BG_COLORREF = 0xE8E8E8
+TEXT_COLORREF = 0x222222
+WARN_COLORREF = 0x0000CC
+CONTENT_HEIGHT = 675
 IDI_APPLICATION = 32512
 MODIFIERS = {"ALT": 0x0001, "CTRL": 0x0002, "SHIFT": 0x0004, "WIN": 0x0008}
 
@@ -109,6 +165,9 @@ VK_CODES = {
     "INSERT": 0x2D,
     "DELETE": 0x2E,
 }
+for index in range(10):
+    VK_CODES[f"NUMPAD{index}"] = 0x60 + index
+
 for index in range(1, 25):
     VK_CODES[f"F{index}"] = 0x6F + index
 for char in "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789":
@@ -120,6 +179,73 @@ def app_dir() -> Path:
         return Path(sys.executable).resolve().parent
     return Path(__file__).resolve().parent
 
+
+
+
+def bundle_dir() -> Path:
+    """PyInstaller extraction folder when bundled, otherwise the script folder."""
+    if getattr(sys, "frozen", False) and hasattr(sys, "_MEIPASS"):
+        return Path(sys._MEIPASS)
+    return app_dir()
+
+
+def assets_candidates() -> list[Path]:
+    """Search both beside the exe/script and inside a PyInstaller bundle."""
+    seen: list[Path] = []
+    for base in (app_dir(), bundle_dir()):
+        candidate = base / ASSETS_FOLDER
+        if candidate not in seen:
+            seen.append(candidate)
+    return seen
+
+
+def assets_dir() -> Path:
+    """Finished icon/logo assets live here. No make_icon.py, no source image required."""
+    return assets_candidates()[0]
+
+
+def asset_path(filename: str) -> Path | None:
+    search_roots = []
+
+    if getattr(sys, "frozen", False) and hasattr(sys, "_MEIPASS"):
+        search_roots.append(Path(sys._MEIPASS))
+
+    search_roots.append(app_dir())
+
+    for root in search_roots:
+        candidate = root / ASSETS_FOLDER / filename
+        if candidate.exists():
+            return candidate
+
+    return None
+
+
+def extra_asset_path(filename: str) -> Path | None:
+    search_roots = []
+
+    if getattr(sys, "frozen", False) and hasattr(sys, "_MEIPASS"):
+        search_roots.append(Path(sys._MEIPASS))
+
+    search_roots.append(app_dir())
+
+    for root in search_roots:
+        candidate = root / EXTRA_FOLDER / filename
+        if candidate.exists():
+            return candidate
+
+    return None
+
+
+class SCROLLINFO(ctypes.Structure):
+    _fields_ = [
+        ("cbSize", wintypes.UINT),
+        ("fMask", wintypes.UINT),
+        ("nMin", ctypes.c_int),
+        ("nMax", ctypes.c_int),
+        ("nPage", wintypes.UINT),
+        ("nPos", ctypes.c_int),
+        ("nTrackPos", ctypes.c_int),
+    ]
 
 def normalize_key_name(value: str) -> str:
     value = value.strip().upper().replace(" ", "")
@@ -170,6 +296,7 @@ class Settings:
     start_hotkey: str = "F1"
     stop_hotkey: str = "F2"
     toggle_hotkey: str = "F3"
+    exit_hotkey: str = "NUMPAD5"
 
 
 class POINT(ctypes.Structure):
@@ -187,8 +314,9 @@ class MSG(ctypes.Structure):
     ]
 
 
-class WNDCLASS(ctypes.Structure):
+class WNDCLASSEX(ctypes.Structure):
     _fields_ = [
+        ("cbSize", wintypes.UINT),
         ("style", wintypes.UINT),
         ("lpfnWndProc", ctypes.c_void_p),
         ("cbClsExtra", ctypes.c_int),
@@ -199,7 +327,12 @@ class WNDCLASS(ctypes.Structure):
         ("hbrBackground", wintypes.HANDLE),
         ("lpszMenuName", wintypes.LPCWSTR),
         ("lpszClassName", wintypes.LPCWSTR),
+        ("hIconSm", wintypes.HANDLE),
     ]
+
+
+user32.RegisterClassExW.argtypes = [ctypes.POINTER(WNDCLASSEX)]
+user32.RegisterClassExW.restype = wintypes.ATOM
 
 
 class MOUSEINPUT(ctypes.Structure):
@@ -283,6 +416,7 @@ class WinInput:
 
 class NativeApp:
     def __init__(self) -> None:
+        self.set_app_user_model_id()
         self.instance = kernel32.GetModuleHandleW(None)
         self.class_name = "BoltAutoClickerWindow"
         self.settings_path = app_dir() / SETTINGS_FILE
@@ -291,40 +425,94 @@ class NativeApp:
         self.stop_event = threading.Event()
         self.worker: threading.Thread | None = None
         self.controls: dict[str, wintypes.HWND] = {}
+        self.child_layout: dict[int, tuple[int, int, int, int]] = {}
+        self.warning_labels: set[int] = set()
+        self.scroll_y = 0
         self.hotkey_controls: dict[str, wintypes.HWND] = {}
         self.hotkey_hwnd: wintypes.HWND | None = None
         self.wndproc_ref = ctypes.WINFUNCTYPE(LRESULT, wintypes.HWND, wintypes.UINT, wintypes.WPARAM, wintypes.LPARAM)(self.wndproc)
         self.font = gdi32.CreateFontW(18, 0, 0, 0, 400, 0, 0, 0, 1, 0, 0, 0, 0, "Segoe UI")
         self.bold_font = gdi32.CreateFontW(25, 0, 0, 0, 700, 0, 0, 0, 1, 0, 0, 0, 0, "Segoe UI")
-        self.bg_brush = gdi32.CreateSolidBrush(0xF7EFE6)
-        self.app_icon = self.load_app_icon(32)
+        self.bg_brush = gdi32.CreateSolidBrush(BG_COLORREF)
+        self.app_icon = self.load_app_icon(64)
         self.app_icon_small = self.load_app_icon(16)
         self.register_class()
         self.hwnd = self.create_window()
         self.build_controls()
+        self.update_scrollbar()
         self.apply_settings(self.settings)
         self.register_hotkeys()
         self.set_status("Ready.")
 
+    def set_app_user_model_id(self) -> None:
+        # Makes Windows group this app correctly on the taskbar and helps it use this app's icon.
+        try:
+            shell32.SetCurrentProcessExplicitAppUserModelID(APP_AUMID)
+        except Exception:
+            pass
+
     def register_class(self) -> None:
-        wc = WNDCLASS()
+        wc = WNDCLASSEX()
+        wc.cbSize = ctypes.sizeof(WNDCLASSEX)
         wc.lpfnWndProc = ctypes.cast(self.wndproc_ref, ctypes.c_void_p)
         wc.hInstance = self.instance
-        wc.hIcon = self.app_icon or user32.LoadIconW(None, ctypes.c_wchar_p(IDI_APPLICATION))
-        wc.hCursor = user32.LoadCursorW(None, ctypes.c_wchar_p(32512))
+        wc.hIcon = self.app_icon or user32.LoadIconW(None, MAKEINTRESOURCEW(IDI_APPLICATION))
+        wc.hIconSm = self.app_icon_small or self.app_icon or user32.LoadIconW(None, MAKEINTRESOURCEW(IDI_APPLICATION))
+        wc.hCursor = user32.LoadCursorW(None, wintypes.LPCWSTR(32512))
         wc.hbrBackground = self.bg_brush
         wc.lpszClassName = self.class_name
-        user32.RegisterClassW(ctypes.byref(wc))
+        atom = user32.RegisterClassExW(ctypes.byref(wc))
+        if not atom:
+            # If the class already exists from a very fast relaunch, continue instead of crashing.
+            pass
 
-    def load_app_icon(self, size: int) -> wintypes.HANDLE:
-        icon = app_dir() / "assets" / "bolt_autoclicker.ico"
-        if not icon.exists():
+    def load_app_icon(self, size: int) -> wintypes.HANDLE | None:
+        # First load the embedded PyInstaller EXE icon.
+        # MAKEINTRESOURCEW is required here. Passing ctypes.c_wchar_p(1) can fail.
+        for resource_id in (1, 101, 32512):
+            handle = user32.LoadImageW(
+                self.instance,
+                MAKEINTRESOURCEW(resource_id),
+                IMAGE_ICON,
+                size,
+                size,
+                LR_DEFAULTSIZE if size <= 0 else 0,
+            )
+            if handle:
+                return handle
+
+            handle = user32.LoadIconW(self.instance, MAKEINTRESOURCEW(resource_id))
+            if handle:
+                return handle
+
+        # Fallback to the bundled/external icon. Prefer extra\ for the taskbar/window icon.
+        icon = extra_asset_path(APP_ICO_FILE) or asset_path(APP_ICO_FILE)
+        if icon is None:
             return None
-        return user32.LoadImageW(None, str(icon), IMAGE_ICON, size, size, LR_LOADFROMFILE)
+
+        for cx, cy in ((size, size), (64, 64), (48, 48), (32, 32), (16, 16), (0, 0)):
+            handle = user32.LoadImageW(
+                None,
+                str(icon),
+                IMAGE_ICON,
+                cx,
+                cy,
+                LR_LOADFROMFILE | (LR_DEFAULTSIZE if cx == 0 else 0),
+            )
+            if handle:
+                return handle
+
+        return None
+
+    def load_header_bitmap(self) -> wintypes.HANDLE | None:
+        bitmap = asset_path(APP_HEADER_BMP_FILE)
+        if bitmap is None:
+            return None
+        return user32.LoadImageW(None, str(bitmap), IMAGE_BITMAP, 64, 64, LR_LOADFROMFILE)
 
     def create_window(self) -> wintypes.HWND:
-        style = WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX
-        hwnd = user32.CreateWindowExW(0, self.class_name, APP_NAME, style | WS_VISIBLE, 180, 120, 560, 510, None, None, self.instance, None)
+        style = WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX | WS_THICKFRAME | WS_MAXIMIZEBOX | WS_VSCROLL
+        hwnd = user32.CreateWindowExW(0, self.class_name, APP_NAME, style | WS_VISIBLE, 180, 120, 620, 600, None, None, self.instance, None)
         if not hwnd:
             raise ctypes.WinError()
         if self.app_icon:
@@ -334,50 +522,62 @@ class NativeApp:
         return hwnd
 
     def build_controls(self) -> None:
-        self.label("Bolt AutoClicker", 70, 14, 250, 28, bold=True)
-        self.label("Compact Windows autoclicker with saved hotkeys.", 72, 42, 330, 22)
-        self.logo_box = self.create("STATIC", "", WS_CHILD | WS_VISIBLE | SS_ICON, 16, 12, 48, 48)
-        if self.app_icon:
-            user32.SendMessageW(self.logo_box, STM_SETICON, self.app_icon, 0)
+        self.logo_box = self.create("STATIC", "", WS_CHILD | WS_VISIBLE | SS_BITMAP, 20, 12, 64, 64)
+        header_bitmap = self.load_header_bitmap()
+        if header_bitmap:
+            user32.SendMessageW(self.logo_box, STM_SETIMAGE, IMAGE_BITMAP, header_bitmap)
+        else:
+            logo_icon = self.load_app_icon(48)
+            if logo_icon:
+                user32.SendMessageW(self.logo_box, STM_SETICON, logo_icon, 0)
 
-        self.group("Click interval", 12, 68, 520, 78)
+        # Moved title/description to the right so they do not crowd the logo.
+        self.label("Bolt AutoClicker", 104, 16, 300, 30, bold=True)
+        self.label("Compact Windows autoclicker with saved hotkeys.", 106, 48, 380, 22)
+        self.button("exit_app", "Exit", 500, 22, 70, 30)
+
+        self.group("Click interval", 18, 82, 550, 106)
         for index, (name, text) in enumerate((("hours", "Hours"), ("minutes", "Minutes"), ("seconds", "Seconds"), ("milliseconds", "Milliseconds"))):
-            x = 28 + index * 122
-            self.label(text, x, 88, 95, 20)
-            self.edit(name, x, 110, 84, 24, number=True)
-        self.check("fastest", "As fast as possible", 28, 146, 180, 22)
+            x = 36 + index * 128
+            self.label(text, x, 106, 105, 20)
+            self.edit(name, x, 130, 90, 26, number=True)
+        self.check("fastest", "As fast as possible", 36, 158, 195, 22)
+        warning = self.label("Warning: sub-millisecond / fastest timing may be limited by Windows scheduling and hardware.", 36, 178, 500, 20)
+        self.warning_labels.add(int(warning))
 
-        self.group("Click repeat", 12, 168, 520, 72)
-        self.radio("repeat_forever", "Repeat until stopped", 28, 190, 180, 22)
-        self.radio("repeat_count_mode", "Repeat this many times", 28, 216, 180, 22)
-        self.edit("repeat_count", 215, 214, 90, 24, number=True)
+        self.group("Click repeat", 18, 204, 550, 78)
+        self.radio("repeat_forever", "Repeat until stopped", 36, 228, 195, 22)
+        self.radio("repeat_count_mode", "Repeat this many times", 36, 256, 195, 22)
+        self.edit("repeat_count", 238, 254, 100, 26, number=True)
 
-        self.group("Action", 12, 250, 520, 72)
-        self.radio("action_mouse", "Mouse click", 28, 272, 120, 22)
-        self.radio("action_key", "Keyboard key", 28, 298, 120, 22)
-        self.label("Button", 158, 272, 48, 22)
-        self.combo("mouse_button", 210, 270, 90, 120, ["left", "right", "middle"])
-        self.label("Clicks", 314, 272, 42, 22)
-        self.combo("click_count", 360, 270, 90, 120, ["single", "double"])
-        self.label("Key", 158, 298, 38, 22)
-        self.edit("key_name", 210, 296, 100, 24)
+        self.group("Action", 18, 298, 550, 82)
+        self.radio("action_mouse", "Mouse click", 36, 322, 128, 22)
+        self.radio("action_key", "Keyboard key", 36, 352, 128, 22)
+        self.label("Button", 176, 322, 52, 22)
+        self.combo("mouse_button", 232, 320, 94, 120, ["left", "right", "middle"])
+        self.label("Clicks", 342, 322, 48, 22)
+        self.combo("click_count", 394, 320, 98, 120, ["single", "double"])
+        self.label("Key", 176, 352, 38, 22)
+        self.edit("key_name", 232, 350, 112, 26)
 
-        self.group("Click position", 12, 332, 520, 72)
-        self.radio("position_current", "Current cursor position", 28, 354, 190, 22)
-        self.radio("position_fixed", "Fixed position", 28, 380, 115, 22)
-        self.label("X", 150, 380, 18, 22)
-        self.edit("x", 170, 378, 64, 24, number=True)
-        self.label("Y", 242, 380, 18, 22)
-        self.edit("y", 262, 378, 64, 24, number=True)
-        self.button("pick_position", "Use Current Position", 340, 376, 150, 26)
+        self.group("Click position", 18, 396, 550, 84)
+        self.radio("position_current", "Current cursor position", 36, 420, 205, 22)
+        self.radio("position_fixed", "Fixed position", 36, 450, 122, 22)
+        self.label("X", 166, 450, 18, 22)
+        self.edit("x", 188, 448, 72, 26, number=True)
+        self.label("Y", 270, 450, 18, 22)
+        self.edit("y", 292, 448, 72, 26, number=True)
+        self.button("pick_position", "Use Current Position", 382, 446, 166, 30)
 
-        self.button("start", "Start", 12, 414, 168, 30, default=True)
-        self.button("stop", "Stop", 194, 414, 168, 30)
-        self.button("toggle", "Toggle", 376, 414, 156, 30)
-        self.button("save", "Save Settings", 12, 454, 168, 28)
-        self.button("reset", "Reset Settings", 194, 454, 168, 28)
-        self.button("hotkeys", "Change Hotkeys", 376, 454, 156, 28)
-        self.controls["status"] = self.label("", 12, 488, 520, 20)
+        self.button("start", "Start", 18, 500, 176, 34, default=True)
+        self.button("stop", "Stop", 206, 500, 176, 34)
+        self.button("toggle", "Toggle", 394, 500, 174, 34)
+
+        self.button("save", "Save Settings", 18, 548, 176, 32)
+        self.button("reset", "Reset Settings", 206, 548, 176, 32)
+        self.button("hotkeys", "Change Hotkeys", 394, 548, 174, 32)
+
+        self.controls["status"] = self.label("", 18, 600, 550, 22)
 
     def label(self, text: str, x: int, y: int, w: int, h: int, bold: bool = False) -> wintypes.HWND:
         hwnd = self.create("STATIC", text, WS_CHILD | WS_VISIBLE | SS_LEFT | SS_CENTERIMAGE, x, y, w, h)
@@ -385,12 +585,14 @@ class NativeApp:
         return hwnd
 
     def group(self, text: str, x: int, y: int, w: int, h: int) -> wintypes.HWND:
-        hwnd = self.create("BUTTON", text, WS_CHILD | WS_VISIBLE | 0x00000007, x, y, w, h)
+        # Native group boxes can look faint, so WS_BORDER gives the boxes a clearer outline.
+        hwnd = self.create("BUTTON", text, WS_CHILD | WS_VISIBLE | BS_GROUPBOX | WS_BORDER, x, y, w, h)
         user32.SendMessageW(hwnd, WM_SETFONT, self.font, True)
         return hwnd
 
     def button(self, name: str, text: str, x: int, y: int, w: int, h: int, default: bool = False) -> None:
-        style = WS_CHILD | WS_VISIBLE | WS_TABSTOP | (BS_DEFPUSHBUTTON if default else BS_PUSHBUTTON)
+        # Do not use BS_DEFPUSHBUTTON; it makes Start/F1 look permanently highlighted.
+        style = WS_CHILD | WS_VISIBLE | WS_TABSTOP | BS_PUSHBUTTON
         self.controls[name] = self.create("BUTTON", text, style, x, y, w, h)
         user32.SendMessageW(self.controls[name], WM_SETFONT, self.font, True)
 
@@ -403,12 +605,12 @@ class NativeApp:
         user32.SendMessageW(self.controls[name], WM_SETFONT, self.font, True)
 
     def edit(self, name: str, x: int, y: int, w: int, h: int, number: bool = False) -> None:
-        style = WS_CHILD | WS_VISIBLE | WS_TABSTOP | 0x00000080 | (ES_NUMBER if number else 0)
+        style = WS_CHILD | WS_VISIBLE | WS_TABSTOP | WS_BORDER | 0x00000080 | (ES_NUMBER if number else 0)
         self.controls[name] = self.create("EDIT", "", style, x, y, w, h)
         user32.SendMessageW(self.controls[name], WM_SETFONT, self.font, True)
 
     def combo(self, name: str, x: int, y: int, w: int, h: int, values: list[str]) -> None:
-        hwnd = self.create("COMBOBOX", "", WS_CHILD | WS_VISIBLE | WS_TABSTOP | CBS_DROPDOWNLIST, x, y, w, h)
+        hwnd = self.create("COMBOBOX", "", WS_CHILD | WS_VISIBLE | WS_TABSTOP | WS_BORDER | CBS_DROPDOWNLIST, x, y, w, h)
         self.controls[name] = hwnd
         user32.SendMessageW(hwnd, WM_SETFONT, self.font, True)
         for value in values:
@@ -419,7 +621,69 @@ class NativeApp:
         return self.create_in(self.hwnd, cls, text, style, x, y, w, h)
 
     def create_in(self, parent: wintypes.HWND, cls: str, text: str, style: int, x: int, y: int, w: int, h: int) -> wintypes.HWND:
-        return user32.CreateWindowExW(0, cls, text, style, x, y, w, h, parent, None, self.instance, None)
+        hwnd = user32.CreateWindowExW(0, cls, text, style, x, y - (self.scroll_y if parent == self.hwnd else 0), w, h, parent, None, self.instance, None)
+        if parent == self.hwnd and hwnd:
+            self.child_layout[int(hwnd)] = (x, y, w, h)
+        return hwnd
+
+    def client_height(self) -> int:
+        rect = wintypes.RECT()
+        if not user32.GetClientRect(self.hwnd, ctypes.byref(rect)):
+            return 0
+        return max(0, rect.bottom - rect.top)
+
+    def update_scrollbar(self) -> None:
+        if not hasattr(self, "hwnd"):
+            return
+        height = self.client_height()
+        max_scroll = self.max_scroll()
+        self.scroll_y = min(max(self.scroll_y, 0), max_scroll)
+        info = SCROLLINFO()
+        info.cbSize = ctypes.sizeof(SCROLLINFO)
+        info.fMask = SIF_ALL
+        info.nMin = 0
+        info.nMax = CONTENT_HEIGHT
+        info.nPage = max(1, height)
+        info.nPos = self.scroll_y
+        user32.SetScrollInfo(self.hwnd, SB_VERT, ctypes.byref(info), True)
+        self.apply_scroll()
+
+    def max_scroll(self) -> int:
+        return max(0, CONTENT_HEIGHT - self.client_height())
+
+    def scroll_to(self, value: int) -> None:
+        new_value = min(max(value, 0), self.max_scroll())
+        if new_value == self.scroll_y:
+            return
+        self.scroll_y = new_value
+        self.update_scrollbar()
+
+    def handle_vscroll(self, wparam: int) -> None:
+        code = wparam & 0xFFFF
+        thumb = (wparam >> 16) & 0xFFFF
+        if thumb >= 0x8000:
+            thumb -= 0x10000
+
+        if code == SB_LINEUP:
+            self.scroll_to(self.scroll_y - 24)
+        elif code == SB_LINEDOWN:
+            self.scroll_to(self.scroll_y + 24)
+        elif code == SB_PAGEUP:
+            self.scroll_to(self.scroll_y - max(60, self.client_height() - 40))
+        elif code == SB_PAGEDOWN:
+            self.scroll_to(self.scroll_y + max(60, self.client_height() - 40))
+        elif code in (SB_THUMBTRACK, SB_THUMBPOSITION):
+            self.scroll_to(thumb)
+
+    def handle_mousewheel(self, wparam: int) -> None:
+        delta = (wparam >> 16) & 0xFFFF
+        if delta >= 0x8000:
+            delta -= 0x10000
+        self.scroll_to(self.scroll_y - int(delta / 120) * 54)
+
+    def apply_scroll(self) -> None:
+        for hwnd_value, (x, y, w, h) in self.child_layout.items():
+            user32.SetWindowPos(wintypes.HWND(hwnd_value), None, x, y - self.scroll_y, w, h, SWP_NOZORDER | SWP_NOACTIVATE)
 
     def load_settings(self) -> Settings:
         if not self.settings_path.exists():
@@ -463,6 +727,7 @@ class NativeApp:
             start_hotkey=s.start_hotkey,
             stop_hotkey=s.stop_hotkey,
             toggle_hotkey=s.toggle_hotkey,
+            exit_hotkey=s.exit_hotkey,
         )
 
     def start(self) -> None:
@@ -514,8 +779,8 @@ class NativeApp:
             style | WS_VISIBLE,
             260,
             180,
-            330,
-            205,
+            350,
+            245,
             self.hwnd,
             None,
             self.instance,
@@ -526,6 +791,7 @@ class NativeApp:
             ("Start hotkey", "hk_start", self.settings.start_hotkey, 18),
             ("Stop hotkey", "hk_stop", self.settings.stop_hotkey, 55),
             ("Toggle hotkey", "hk_toggle", self.settings.toggle_hotkey, 92),
+            ("Exit app hotkey", "hk_exit", self.settings.exit_hotkey, 129),
         ]
         for label, name, value, y in rows:
             lbl = self.create_in(self.hotkey_hwnd, "STATIC", label, WS_CHILD | WS_VISIBLE | SS_LEFT | SS_CENTERIMAGE, 18, y, 105, 22)
@@ -533,10 +799,10 @@ class NativeApp:
             edit = self.create_in(self.hotkey_hwnd, "EDIT", value, WS_CHILD | WS_VISIBLE | WS_TABSTOP | 0x00000080, 130, y, 145, 24)
             user32.SendMessageW(edit, WM_SETFONT, self.font, True)
             self.hotkey_controls[name] = edit
-        tip = self.create_in(self.hotkey_hwnd, "STATIC", "Examples: F1, CTRL+F1, ALT+S", WS_CHILD | WS_VISIBLE | SS_LEFT, 18, 122, 250, 20)
+        tip = self.create_in(self.hotkey_hwnd, "STATIC", "Examples: F1, CTRL+F1, ALT+S, NUMPAD5", WS_CHILD | WS_VISIBLE | SS_LEFT, 18, 160, 300, 20)
         user32.SendMessageW(tip, WM_SETFONT, self.font, True)
-        self.hotkey_button("hk_save", "Save", 52, 148, 100, 28)
-        self.hotkey_button("hk_cancel", "Cancel", 170, 148, 100, 28)
+        self.hotkey_button("hk_save", "Save", 62, 188, 100, 28)
+        self.hotkey_button("hk_cancel", "Cancel", 182, 188, 100, 28)
 
     def hotkey_button(self, name: str, text: str, x: int, y: int, w: int, h: int) -> None:
         hwnd = self.create_in(self.hotkey_hwnd, "BUTTON", text, WS_CHILD | WS_VISIBLE | WS_TABSTOP | BS_PUSHBUTTON, x, y, w, h)
@@ -548,6 +814,7 @@ class NativeApp:
             "start_hotkey": self.get_window_text(self.hotkey_controls["hk_start"]).strip().upper(),
             "stop_hotkey": self.get_window_text(self.hotkey_controls["hk_stop"]).strip().upper(),
             "toggle_hotkey": self.get_window_text(self.hotkey_controls["hk_toggle"]).strip().upper(),
+            "exit_hotkey": self.get_window_text(self.hotkey_controls["hk_exit"]).strip().upper(),
         }
         for value in values.values():
             if parse_hotkey(value) is None:
@@ -556,6 +823,7 @@ class NativeApp:
         self.settings.start_hotkey = values["start_hotkey"]
         self.settings.stop_hotkey = values["stop_hotkey"]
         self.settings.toggle_hotkey = values["toggle_hotkey"]
+        self.settings.exit_hotkey = values["exit_hotkey"]
         self.save_settings()
         user32.DestroyWindow(self.hotkey_hwnd)
 
@@ -565,6 +833,11 @@ class NativeApp:
         self.set_text("y", str(y))
         self.set_radio("position_fixed")
         self.set_status(f"Fixed position set to {x}, {y}.")
+
+    def exit_app(self) -> None:
+        self.stop()
+        self.unregister_hotkeys()
+        user32.DestroyWindow(self.hwnd)
 
     def click_loop(self, settings: Settings) -> None:
         interval = self.interval_seconds(settings)
@@ -588,21 +861,26 @@ class NativeApp:
 
     def register_hotkeys(self) -> None:
         self.unregister_hotkeys()
-        for hotkey_id, text in ((1, self.settings.start_hotkey), (2, self.settings.stop_hotkey), (3, self.settings.toggle_hotkey)):
+        for hotkey_id, text in (
+            (1, self.settings.start_hotkey),
+            (2, self.settings.stop_hotkey),
+            (3, self.settings.toggle_hotkey),
+            (4, self.settings.exit_hotkey),
+        ):
             parsed = parse_hotkey(text)
             if parsed:
                 modifiers, vk = parsed
                 user32.RegisterHotKey(self.hwnd, hotkey_id, modifiers, vk)
 
     def unregister_hotkeys(self) -> None:
-        for hotkey_id in (1, 2, 3):
+        for hotkey_id in (1, 2, 3, 4):
             user32.UnregisterHotKey(self.hwnd, hotkey_id)
 
     def refresh_hotkey_buttons(self) -> None:
         self.set_text("start", f"Start ({self.settings.start_hotkey})")
         self.set_text("stop", f"Stop ({self.settings.stop_hotkey})")
         self.set_text("toggle", f"Toggle ({self.settings.toggle_hotkey})")
-        self.set_status(f"Ready. Start: {self.settings.start_hotkey}  Stop: {self.settings.stop_hotkey}  Toggle: {self.settings.toggle_hotkey}")
+        self.set_status(f"Ready. Start: {self.settings.start_hotkey}  Stop: {self.settings.stop_hotkey}  Toggle: {self.settings.toggle_hotkey}  Exit: {self.settings.exit_hotkey}")
 
     def wndproc(self, hwnd: wintypes.HWND, msg: int, wparam: int, lparam: int) -> int:
         if msg == WM_COMMAND:
@@ -625,10 +903,27 @@ class NativeApp:
                 self.stop()
             elif wparam == 3:
                 self.toggle()
+            elif wparam == 4:
+                self.exit_app()
+        elif msg == WM_SIZE:
+            if hasattr(self, "hwnd"):
+                self.update_scrollbar()
+        elif msg == WM_VSCROLL:
+            self.handle_vscroll(int(wparam))
+            return 0
+        elif msg == WM_MOUSEWHEEL:
+            self.handle_mousewheel(int(wparam))
+            return 0
         elif msg == WM_CTLCOLORSTATIC:
             gdi32.SetBkMode(wparam, 1)
-            gdi32.SetTextColor(wparam, 0x3B2114)
+            if int(lparam) in self.warning_labels:
+                gdi32.SetTextColor(wparam, WARN_COLORREF)
+            else:
+                gdi32.SetTextColor(wparam, TEXT_COLORREF)
             return self.bg_brush
+        elif msg == WM_CLOSE:
+            self.exit_app()
+            return 0
         elif msg == WM_DESTROY:
             if hwnd == self.hotkey_hwnd:
                 self.hotkey_hwnd = None
@@ -649,6 +944,7 @@ class NativeApp:
             "reset": self.reset_settings,
             "hotkeys": self.change_hotkeys,
             "pick_position": self.use_current_position,
+            "exit_app": self.exit_app,
         }
         if name in actions:
             actions[name]()

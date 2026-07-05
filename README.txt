@@ -1,45 +1,49 @@
 Bolt AutoClicker
 ================
 
-A simple Windows autoclicker inspired by the classic GT Auto Clicker layout.
+Bolt AutoClicker is a lightweight Windows autoclicker packaged as a single
+portable executable. It is built for simple repeat clicking, key pressing, and
+hotkey-controlled automation without an installer or built-in GitHub updater.
 
-Features
---------
-- Repeat forever or repeat a specific number of times.
-- Mouse mode with left, right, or middle button.
-- Single-click or double-click for mouse mode.
-- Keyboard mode for sending one key repeatedly.
+Important Features
+------------------
+- Mouse clicking with left, right, or middle button support.
+- Single-click and double-click mouse modes.
+- Keyboard key repeat mode.
+- Repeat forever or stop after a chosen repeat count.
 - Interval controls for hours, minutes, seconds, and milliseconds.
-- Fastest possible mode.
-- Current cursor position mode or fixed X/Y position mode.
-- Start, Stop, and Off buttons.
-- Save Settings, Reset Settings, and Change Hotkeys buttons.
-- Global hotkeys. Defaults are F1 start, F2 stop, F3 toggle.
-- No GitHub auto-updater.
+- Fastest possible mode with a timing warning for sub-millisecond limits.
+- Current cursor position mode or fixed X/Y click position mode.
+- Global hotkeys for start, stop, toggle, and exit.
+- Save, reset, and edit hotkey settings.
 
-Run From Source
+Default Hotkeys
 ---------------
-python .\bolt_autoclicker.py
+- Start: F1
+- Stop: F2
+- Toggle: F3
+- Exit: NUMPAD5
 
-Build One EXE Like CodeHub
---------------------------
+Build
+-----
+Run:
+
 AppUpdater.bat
 
-The release file will be:
+The build produces:
+
 BoltAutoClicker.exe
 
-Publish Source To GitHub Repo
------------------------------
+Release
+-------
+Source publishing is handled by:
+
 Github.bat
 
-Publish GitHub Release EXE
---------------------------
+GitHub release publishing is handled by:
+
 Github Release.bat
 
-Expected repo folder:
-F:\Github\repos\codex\bolt-autoclicker
-
-Notes
------
-Settings save beside the app as bolt_settings.json. When compiled as one EXE,
-the JSON file will be created next to BoltAutoClicker.exe.
+Settings
+--------
+Settings are stored beside the executable in bolt_settings.json.

@@ -28,17 +28,20 @@ def make_header_bitmap() -> None:
     canvas.save(HEADER_BMP)
 
 
-def ensure_taskbar_icon() -> None:
+def make_taskbar_icon() -> None:
+    if not LOGO_PNG.exists():
+        raise SystemExit(f"Missing logo image: {LOGO_PNG}")
+
     EXTRA.mkdir(exist_ok=True)
-    if EXTRA_ICO.exists():
-        return
-    if ASSET_ICO.exists():
-        shutil.copy2(ASSET_ICO, EXTRA_ICO)
+    image = Image.open(LOGO_PNG).convert("RGBA")
+    icon_sizes = [(16, 16), (24, 24), (32, 32), (48, 48), (64, 64), (128, 128), (256, 256)]
+    image.save(EXTRA_ICO, format="ICO", sizes=icon_sizes)
+    shutil.copy2(EXTRA_ICO, ASSET_ICO)
 
 
 def main() -> None:
     make_header_bitmap()
-    ensure_taskbar_icon()
+    make_taskbar_icon()
     print(HEADER_BMP)
     print(EXTRA_ICO)
 

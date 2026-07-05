@@ -467,7 +467,23 @@ class NativeApp:
             pass
 
     def load_app_icon(self, size: int) -> wintypes.HANDLE | None:
-        # First load the embedded PyInstaller EXE icon.
+        # Prefer the prepared external ICO so the title bar/taskbar can refresh
+        # immediately even when Windows has cached an older embedded icon.
+        icon = extra_asset_path(APP_ICO_FILE) or asset_path(APP_ICO_FILE)
+        if icon is not None:
+            for cx, cy in ((size, size), (64, 64), (48, 48), (32, 32), (16, 16), (0, 0)):
+                handle = user32.LoadImageW(
+                    None,
+                    str(icon),
+                    IMAGE_ICON,
+                    cx,
+                    cy,
+                    LR_LOADFROMFILE | (LR_DEFAULTSIZE if cx == 0 else 0),
+                )
+                if handle:
+                    return handle
+
+        # Fallback to the embedded PyInstaller EXE icon.
         # MAKEINTRESOURCEW is required here. Passing ctypes.c_wchar_p(1) can fail.
         for resource_id in (1, 101, 32512):
             handle = user32.LoadImageW(
@@ -482,23 +498,6 @@ class NativeApp:
                 return handle
 
             handle = user32.LoadIconW(self.instance, MAKEINTRESOURCEW(resource_id))
-            if handle:
-                return handle
-
-        # Fallback to the bundled/external icon. Prefer extra\ for the taskbar/window icon.
-        icon = extra_asset_path(APP_ICO_FILE) or asset_path(APP_ICO_FILE)
-        if icon is None:
-            return None
-
-        for cx, cy in ((size, size), (64, 64), (48, 48), (32, 32), (16, 16), (0, 0)):
-            handle = user32.LoadImageW(
-                None,
-                str(icon),
-                IMAGE_ICON,
-                cx,
-                cy,
-                LR_LOADFROMFILE | (LR_DEFAULTSIZE if cx == 0 else 0),
-            )
             if handle:
                 return handle
 
@@ -1017,6 +1016,10 @@ class NativeApp:
 def main() -> None:
     if sys.platform != "win32":
         raise SystemExit("Bolt AutoClicker is built for Windows.")
+    try:
+        shell32.SetCurrentProcessExplicitAppUserModelID(APP_AUMID)
+    except OSError:
+        pass
     NativeApp().run()
 
 

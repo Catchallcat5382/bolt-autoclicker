@@ -20,12 +20,8 @@ def make_header_bitmap() -> None:
         raise SystemExit(f"Missing logo image: {LOGO_PNG}")
 
     image = Image.open(LOGO_PNG).convert("RGB")
-    image.thumbnail((64, 64), Image.Resampling.LANCZOS)
-    canvas = Image.new("RGB", (64, 64), (232, 232, 232))
-    x = (64 - image.width) // 2
-    y = (64 - image.height) // 2
-    canvas.paste(image, (x, y))
-    canvas.save(HEADER_BMP)
+    image = image.resize((64, 64), Image.Resampling.LANCZOS)
+    image.save(HEADER_BMP)
 
 
 def make_taskbar_icon() -> None:
@@ -40,13 +36,7 @@ def make_taskbar_icon() -> None:
         shutil.copy2(ASSET_ICO, EXTRA_ICO)
         return
 
-    if not LOGO_PNG.exists():
-        raise SystemExit(f"Missing logo image: {LOGO_PNG}")
-
-    image = Image.open(LOGO_PNG).convert("RGBA")
-    icon_sizes = [(16, 16), (24, 24), (32, 32), (48, 48), (64, 64), (128, 128), (256, 256)]
-    image.save(EXTRA_ICO, format="ICO", sizes=icon_sizes)
-    shutil.copy2(EXTRA_ICO, ASSET_ICO)
+    raise SystemExit(f"Missing taskbar icon: {EXTRA_ICO} or {ASSET_ICO}")
 
 
 def main() -> None:

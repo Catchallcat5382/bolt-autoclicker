@@ -1,0 +1,4 @@
+# Runtime has no third-party dependencies.
+# Build/logo dependencies for a single-file Windows release:
+pillow>=10.0
+pyinstaller>=6.0

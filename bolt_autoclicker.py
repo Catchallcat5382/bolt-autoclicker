@@ -62,6 +62,7 @@ WS_OVERLAPPED = 0x00000000
 WS_CAPTION = 0x00C00000
 WS_SYSMENU = 0x00080000
 WS_MINIMIZEBOX = 0x00020000
+WS_EX_DLGMODALFRAME = 0x00000001
 WS_VISIBLE = 0x10000000
 WS_CHILD = 0x40000000
 WS_TABSTOP = 0x00010000
@@ -281,6 +282,8 @@ class NativeApp:
         self.stop_event = threading.Event()
         self.worker: threading.Thread | None = None
         self.controls: dict[str, wintypes.HWND] = {}
+        self.hotkey_controls: dict[str, wintypes.HWND] = {}
+        self.hotkey_hwnd: wintypes.HWND | None = None
         self.wndproc_ref = ctypes.WINFUNCTYPE(LRESULT, wintypes.HWND, wintypes.UINT, wintypes.WPARAM, wintypes.LPARAM)(self.wndproc)
         self.font = gdi32.CreateFontW(18, 0, 0, 0, 400, 0, 0, 0, 1, 0, 0, 0, 0, "Segoe UI")
         self.bold_font = gdi32.CreateFontW(25, 0, 0, 0, 700, 0, 0, 0, 1, 0, 0, 0, 0, "Segoe UI")
@@ -390,7 +393,10 @@ class NativeApp:
             user32.SendMessageW(hwnd, CB_ADDSTRING, 0, ctypes.cast(text, ctypes.c_void_p).value)
 
     def create(self, cls: str, text: str, style: int, x: int, y: int, w: int, h: int) -> wintypes.HWND:
-        return user32.CreateWindowExW(0, cls, text, style, x, y, w, h, self.hwnd, None, self.instance, None)
+        return self.create_in(self.hwnd, cls, text, style, x, y, w, h)
+
+    def create_in(self, parent: wintypes.HWND, cls: str, text: str, style: int, x: int, y: int, w: int, h: int) -> wintypes.HWND:
+        return user32.CreateWindowExW(0, cls, text, style, x, y, w, h, parent, None, self.instance, None)
 
     def load_settings(self) -> Settings:
         if not self.settings_path.exists():
@@ -474,7 +480,61 @@ class NativeApp:
         self.set_status("Settings reset.")
 
     def change_hotkeys(self) -> None:
-        self.message("Edit hotkeys in bolt_settings.json for now.\nDefaults: Start F1, Stop F2, Toggle F3.")
+        if self.hotkey_hwnd:
+            user32.SetForegroundWindow(self.hotkey_hwnd)
+            return
+        style = WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU
+        self.hotkey_hwnd = user32.CreateWindowExW(
+            WS_EX_DLGMODALFRAME,
+            self.class_name,
+            "Change Hotkeys",
+            style | WS_VISIBLE,
+            260,
+            180,
+            330,
+            205,
+            self.hwnd,
+            None,
+            self.instance,
+            None,
+        )
+        self.hotkey_controls.clear()
+        rows = [
+            ("Start hotkey", "hk_start", self.settings.start_hotkey, 18),
+            ("Stop hotkey", "hk_stop", self.settings.stop_hotkey, 55),
+            ("Toggle hotkey", "hk_toggle", self.settings.toggle_hotkey, 92),
+        ]
+        for label, name, value, y in rows:
+            lbl = self.create_in(self.hotkey_hwnd, "STATIC", label, WS_CHILD | WS_VISIBLE | SS_LEFT | SS_CENTERIMAGE, 18, y, 105, 22)
+            user32.SendMessageW(lbl, WM_SETFONT, self.font, True)
+            edit = self.create_in(self.hotkey_hwnd, "EDIT", value, WS_CHILD | WS_VISIBLE | WS_TABSTOP | 0x00000080, 130, y, 145, 24)
+            user32.SendMessageW(edit, WM_SETFONT, self.font, True)
+            self.hotkey_controls[name] = edit
+        tip = self.create_in(self.hotkey_hwnd, "STATIC", "Examples: F1, CTRL+F1, ALT+S", WS_CHILD | WS_VISIBLE | SS_LEFT, 18, 122, 250, 20)
+        user32.SendMessageW(tip, WM_SETFONT, self.font, True)
+        self.hotkey_button("hk_save", "Save", 52, 148, 100, 28)
+        self.hotkey_button("hk_cancel", "Cancel", 170, 148, 100, 28)
+
+    def hotkey_button(self, name: str, text: str, x: int, y: int, w: int, h: int) -> None:
+        hwnd = self.create_in(self.hotkey_hwnd, "BUTTON", text, WS_CHILD | WS_VISIBLE | WS_TABSTOP | BS_PUSHBUTTON, x, y, w, h)
+        user32.SendMessageW(hwnd, WM_SETFONT, self.font, True)
+        self.hotkey_controls[name] = hwnd
+
+    def save_hotkeys_from_dialog(self) -> None:
+        values = {
+            "start_hotkey": self.get_window_text(self.hotkey_controls["hk_start"]).strip().upper(),
+            "stop_hotkey": self.get_window_text(self.hotkey_controls["hk_stop"]).strip().upper(),
+            "toggle_hotkey": self.get_window_text(self.hotkey_controls["hk_toggle"]).strip().upper(),
+        }
+        for value in values.values():
+            if parse_hotkey(value) is None:
+                self.message(f"Invalid hotkey: {value}")
+                return
+        self.settings.start_hotkey = values["start_hotkey"]
+        self.settings.stop_hotkey = values["stop_hotkey"]
+        self.settings.toggle_hotkey = values["toggle_hotkey"]
+        self.save_settings()
+        user32.DestroyWindow(self.hotkey_hwnd)
 
     def use_current_position(self) -> None:
         x, y = self.input.get_position()
@@ -528,6 +588,13 @@ class NativeApp:
                 if control == source:
                     self.dispatch(name)
                     break
+            for name, control in self.hotkey_controls.items():
+                if control == source:
+                    if name == "hk_save":
+                        self.save_hotkeys_from_dialog()
+                    elif name == "hk_cancel":
+                        user32.DestroyWindow(self.hotkey_hwnd)
+                    break
         elif msg == WM_HOTKEY:
             if wparam == 1:
                 self.start()
@@ -540,6 +607,10 @@ class NativeApp:
             gdi32.SetTextColor(wparam, 0x362B1E)
             return self.bg_brush
         elif msg == WM_DESTROY:
+            if hwnd == self.hotkey_hwnd:
+                self.hotkey_hwnd = None
+                self.hotkey_controls.clear()
+                return 0
             self.stop()
             self.unregister_hotkeys()
             user32.PostQuitMessage(0)
@@ -566,7 +637,9 @@ class NativeApp:
             user32.DispatchMessageW(ctypes.byref(msg))
 
     def get_text(self, name: str) -> str:
-        hwnd = self.controls[name]
+        return self.get_window_text(self.controls[name])
+
+    def get_window_text(self, hwnd: wintypes.HWND) -> str:
         length = user32.GetWindowTextLengthW(hwnd)
         buf = ctypes.create_unicode_buffer(length + 1)
         user32.GetWindowTextW(hwnd, buf, length + 1)

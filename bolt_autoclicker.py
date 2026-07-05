@@ -39,6 +39,8 @@ user32.SendMessageW.argtypes = [wintypes.HWND, wintypes.UINT, wintypes.WPARAM, w
 user32.SendMessageW.restype = LRESULT
 user32.LoadCursorW.argtypes = [wintypes.HINSTANCE, wintypes.LPCWSTR]
 user32.LoadCursorW.restype = wintypes.HANDLE
+user32.LoadImageW.argtypes = [wintypes.HINSTANCE, wintypes.LPCWSTR, wintypes.UINT, ctypes.c_int, ctypes.c_int, wintypes.UINT]
+user32.LoadImageW.restype = wintypes.HANDLE
 user32.RegisterHotKey.argtypes = [wintypes.HWND, ctypes.c_int, wintypes.UINT, wintypes.UINT]
 user32.UnregisterHotKey.argtypes = [wintypes.HWND, ctypes.c_int]
 gdi32.SetBkMode.argtypes = [wintypes.HDC, ctypes.c_int]
@@ -49,6 +51,7 @@ WM_COMMAND = 0x0111
 WM_CTLCOLORSTATIC = 0x0138
 WM_HOTKEY = 0x0312
 WM_SETFONT = 0x0030
+WM_SETICON = 0x0080
 BM_SETCHECK = 0x00F1
 BM_GETCHECK = 0x00F0
 BST_CHECKED = 1
@@ -74,6 +77,12 @@ BS_AUTOCHECKBOX = 0x00000003
 CBS_DROPDOWNLIST = 0x0003
 SS_LEFT = 0x00000000
 SS_CENTERIMAGE = 0x00000200
+SS_ICON = 0x00000003
+STM_SETICON = 0x0170
+IMAGE_ICON = 1
+LR_LOADFROMFILE = 0x0010
+ICON_SMALL = 0
+ICON_BIG = 1
 COLOR_WINDOW = 5
 IDI_APPLICATION = 32512
 MODIFIERS = {"ALT": 0x0001, "CTRL": 0x0002, "SHIFT": 0x0004, "WIN": 0x0008}
@@ -287,7 +296,9 @@ class NativeApp:
         self.wndproc_ref = ctypes.WINFUNCTYPE(LRESULT, wintypes.HWND, wintypes.UINT, wintypes.WPARAM, wintypes.LPARAM)(self.wndproc)
         self.font = gdi32.CreateFontW(18, 0, 0, 0, 400, 0, 0, 0, 1, 0, 0, 0, 0, "Segoe UI")
         self.bold_font = gdi32.CreateFontW(25, 0, 0, 0, 700, 0, 0, 0, 1, 0, 0, 0, 0, "Segoe UI")
-        self.bg_brush = gdi32.CreateSolidBrush(0xD8E7EC)
+        self.bg_brush = gdi32.CreateSolidBrush(0xF7EFE6)
+        self.app_icon = self.load_app_icon(32)
+        self.app_icon_small = self.load_app_icon(16)
         self.register_class()
         self.hwnd = self.create_window()
         self.build_controls()
@@ -299,23 +310,35 @@ class NativeApp:
         wc = WNDCLASS()
         wc.lpfnWndProc = ctypes.cast(self.wndproc_ref, ctypes.c_void_p)
         wc.hInstance = self.instance
-        wc.hIcon = user32.LoadIconW(None, ctypes.c_wchar_p(IDI_APPLICATION))
+        wc.hIcon = self.app_icon or user32.LoadIconW(None, ctypes.c_wchar_p(IDI_APPLICATION))
         wc.hCursor = user32.LoadCursorW(None, ctypes.c_wchar_p(32512))
         wc.hbrBackground = self.bg_brush
         wc.lpszClassName = self.class_name
         user32.RegisterClassW(ctypes.byref(wc))
+
+    def load_app_icon(self, size: int) -> wintypes.HANDLE:
+        icon = app_dir() / "assets" / "bolt_autoclicker.ico"
+        if not icon.exists():
+            return None
+        return user32.LoadImageW(None, str(icon), IMAGE_ICON, size, size, LR_LOADFROMFILE)
 
     def create_window(self) -> wintypes.HWND:
         style = WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX
         hwnd = user32.CreateWindowExW(0, self.class_name, APP_NAME, style | WS_VISIBLE, 180, 120, 560, 510, None, None, self.instance, None)
         if not hwnd:
             raise ctypes.WinError()
+        if self.app_icon:
+            user32.SendMessageW(hwnd, WM_SETICON, ICON_BIG, self.app_icon)
+        if self.app_icon_small:
+            user32.SendMessageW(hwnd, WM_SETICON, ICON_SMALL, self.app_icon_small)
         return hwnd
 
     def build_controls(self) -> None:
         self.label("Bolt AutoClicker", 70, 14, 250, 28, bold=True)
         self.label("Compact Windows autoclicker with saved hotkeys.", 72, 42, 330, 22)
-        self.logo_box = self.label("", 16, 14, 42, 42)
+        self.logo_box = self.create("STATIC", "", WS_CHILD | WS_VISIBLE | SS_ICON, 16, 12, 48, 48)
+        if self.app_icon:
+            user32.SendMessageW(self.logo_box, STM_SETICON, self.app_icon, 0)
 
         self.group("Click interval", 12, 68, 520, 78)
         for index, (name, text) in enumerate((("hours", "Hours"), ("minutes", "Minutes"), ("seconds", "Seconds"), ("milliseconds", "Milliseconds"))):
@@ -604,7 +627,7 @@ class NativeApp:
                 self.toggle()
         elif msg == WM_CTLCOLORSTATIC:
             gdi32.SetBkMode(wparam, 1)
-            gdi32.SetTextColor(wparam, 0x362B1E)
+            gdi32.SetTextColor(wparam, 0x3B2114)
             return self.bg_brush
         elif msg == WM_DESTROY:
             if hwnd == self.hotkey_hwnd:
